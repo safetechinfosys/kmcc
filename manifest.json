@@ -1,0 +1,42 @@
+{
+  "name": "Community Registration Portal",
+  "short_name": "Community Portal",
+  "description": "Register, manage events, and connect with your community",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#14181c",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["social", "lifestyle"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Events",
+      "short_name": "Events",
+      "description": "View upcoming events",
+      "url": "/?view=events",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Search Members",
+      "short_name": "Search",
+      "description": "Find community members",
+      "url": "/?view=search",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

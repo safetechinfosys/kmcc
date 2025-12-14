@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description"
+        content="Community Registration Portal - Register, manage events, and connect with your community">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <title>Community Registration Portal</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+</head>
+
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h2>Community Portal</h2>
+            <p>Loading your experience...</p>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app" class="app-container" style="display: none;">
+
+        <!-- Navigation Bar -->
+        <nav id="navbar" class="navbar">
+            <div class="navbar-content">
+                <div class="navbar-brand">
+                    <i class="fas fa-users"></i>
+                    <span>Community Portal</span>
+                </div>
+                <div class="navbar-actions">
+                    <button id="userMenuBtn" class="icon-btn">
+                        <i class="fas fa-user-circle"></i>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+
+            <!-- Login View -->
+            <div id="loginView" class="view active">
+                <div class="auth-container">
+                    <div class="auth-card">
+                        <div class="auth-header">
+                            <div class="auth-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <h1>Welcome Back</h1>
+                            <p>Sign in to access your community portal</p>
+                        </div>
+
+                        <form id="loginForm" class="auth-form">
+                            <div class="form-group">
+                                <label for="loginEmail">Email or Mobile Number</label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-envelope"></i>
+                                    <input type="text" id="loginEmail" required
+                                        placeholder="Enter your email or mobile">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="loginPassword">Password</label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-lock"></i>
+                                    <input type="password" id="loginPassword" required
+                                        placeholder="Enter your password">
+                                    <button type="button" class="toggle-password" data-target="loginPassword">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-block">
+                                <i class="fas fa-sign-in-alt"></i>
+                                Sign In
+                            </button>
+                        </form>
+
+                        <div class="auth-footer">
+                            <p>Don't have an account? <a href="#" id="showRegisterBtn">Register here</a></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Registration View -->
+            <div id="registerView" class="view">
+                <div class="auth-container">
+                    <div class="auth-card wide">
+                        <div class="auth-header">
+                            <div class="auth-icon">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <h1>Join Our Community</h1>
+                            <p>Create your account to get started</p>
+                        </div>
+
+                        <form id="registerForm" class="auth-form">
+                            <!-- Personal Information -->
+                            <div class="form-section">
+                                <h3><i class="fas fa-user"></i> Personal Information</h3>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="regFullName">Full Name *</label>
+                                        <input type="text" id="regFullName" required placeholder="Enter your full name">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="regMobile">Mobile Number *</label>
+                                        <input type="tel" id="regMobile" required placeholder="+91 XXXXXXXXXX">
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="regEmail">Email Address *</label>
+                                        <input type="email" id="regEmail" required placeholder="your.email@example.com">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="regPassword">Password *</label>
+                                        <div class="input-with-icon">
+                                            <input type="password" id="regPassword" required
+                                                placeholder="Create a password">
+                                            <button type="button" class="toggle-password" data-target="regPassword">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="regCountry">Country *</label>
+                                        <select id="regCountry" required>
+                                            <option value="">Select Country</option>
+                                            <option value="India">India</option>
+                                            <option value="USA">United States</option>
+                                            <option value="UK">United Kingdom</option>
+                                            <option value="Canada">Canada</option>
+                                            <option value="Australia">Australia</option>
+                                            <option value="UAE">United Arab Emirates</option>
+                                            <option value="Singapore">Singapore</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="regOccupation">Occupation *</label>
+                                        <input type="text" id="regOccupation" required placeholder="Your occupation">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Family Information -->
+                            <div class="form-section">
+                                <h3><i class="fas fa-heart"></i> Family Information</h3>
+
+                                <div class="form-group">
+                                    <label for="regSpouseName">Spouse Name</label>
+                                    <input type="text" id="regSpouseName" placeholder="Spouse's full name">
+                                </div>
+
+                                <div class="kids-section">
+                                    <div class="section-header">
+                                        <label>Children Details</label>
+                                        <button type="button" id="addKidBtn" class="btn btn-secondary btn-sm">
+                                            <i class="fas fa-plus"></i> Add Child
+                                        </button>
+                                    </div>
+                                    <div id="kidsContainer"></div>
+                                </div>
+                            </div>
+
+                            <!-- Address in India -->
+                            <div class="form-section">
+                                <h3><i class="fas fa-map-marker-alt"></i> Address in India</h3>
+
+                                <div class="form-group">
+                                    <label for="regAddress">Street Address</label>
+                                    <textarea id="regAddress" rows="2"
+                                        placeholder="House/Flat No., Street Name"></textarea>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="regDistrict">District</label>
+                                        <select id="regDistrict">
+                                            <option value="">Select District</option>
+                                            <option value="Thiruvananthapuram">Thiruvananthapuram</option>
+                                            <option value="Kollam">Kollam</option>
+                                            <option value="Pathanamthitta">Pathanamthitta</option>
+                                            <option value="Alappuzha">Alappuzha</option>
+                                            <option value="Kottayam">Kottayam</option>
+                                            <option value="Idukki">Idukki</option>
+                                            <option value="Ernakulam">Ernakulam</option>
+                                            <option value="Thrissur">Thrissur</option>
+                                            <option value="Palakkad">Palakkad</option>
+                                            <option value="Malappuram">Malappuram</option>
+                                            <option value="Kozhikode">Kozhikode</option>
+                                            <option value="Wayanad">Wayanad</option>
+                                            <option value="Kannur">Kannur</option>
+                                            <option value="Kasaragod">Kasaragod</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="regPincode">Pincode</label>
+                                        <input type="text" id="regPincode" placeholder="6-digit pincode">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="button" id="backToLoginBtn" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> Back to Login
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-user-plus"></i> Create Account
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard View -->
+            <div id="dashboardView" class="view">
+                <div class="dashboard-container">
+                    <div class="dashboard-header">
+                        <h1>Welcome, <span id="userName">User</span>!</h1>
+                        <p>Manage your community activities</p>
+                    </div>
+
+                    <div class="dashboard-grid">
+                        <div class="dashboard-card" id="viewEventsCard">
+                            <div class="card-icon">
+                                <i class="fas fa-calendar-alt"></i>
+                            </div>
+                            <h3>Events</h3>
+                            <p>Browse and register for upcoming events</p>
+                            <div class="card-badge">3 Upcoming</div>
+                        </div>
+
+                        <div class="dashboard-card" id="searchMembersCard">
+                            <div class="card-icon">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <h3>Search Members</h3>
+                            <p>Find and connect with community members</p>
+                        </div>
+
+                        <div class="dashboard-card" id="myRegistrationsCard">
+                            <div class="card-icon">
+                                <i class="fas fa-ticket-alt"></i>
+                            </div>
+                            <h3>My Registrations</h3>
+                            <p>View your event registrations</p>
+                        </div>
+
+                        <div class="dashboard-card" id="profileCard">
+                            <div class="card-icon">
+                                <i class="fas fa-user-edit"></i>
+                            </div>
+                            <h3>My Profile</h3>
+                            <p>Update your information</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Events View -->
+            <div id="eventsView" class="view">
+                <div class="content-container">
+                    <div class="content-header">
+                        <button class="btn-back" id="backToDashboard1">
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                        <h1>Upcoming Events</h1>
+                    </div>
+
+                    <div id="eventsGrid" class="events-grid"></div>
+                </div>
+            </div>
+
+            <!-- Search Members View -->
+            <div id="searchView" class="view">
+                <div class="content-container">
+                    <div class="content-header">
+                        <button class="btn-back" id="backToDashboard2">
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                        <h1>Search Members</h1>
+                    </div>
+
+                    <div class="search-section">
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="searchInput"
+                                placeholder="Search by name, mobile, email, or district...">
+                        </div>
+
+                        <div id="searchResults" class="search-results"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Registrations View -->
+            <div id="myRegistrationsView" class="view">
+                <div class="content-container">
+                    <div class="content-header">
+                        <button class="btn-back" id="backToDashboard3">
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                        <h1>My Event Registrations</h1>
+                    </div>
+
+                    <div id="myRegistrationsList" class="registrations-list"></div>
+                </div>
+            </div>
+
+            <!-- Profile View -->
+            <div id="profileView" class="view">
+                <div class="content-container">
+                    <div class="content-header">
+                        <button class="btn-back" id="backToDashboard4">
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                        <h1>My Profile</h1>
+                    </div>
+
+                    <div id="profileContent" class="profile-content"></div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Bottom Navigation (Mobile) -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-view="dashboard">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </button>
+            <button class="nav-item" data-view="events">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Events</span>
+            </button>
+            <button class="nav-item" data-view="search">
+                <i class="fas fa-search"></i>
+                <span>Search</span>
+            </button>
+            <button class="nav-item" data-view="profile">
+                <i class="fas fa-user"></i>
+                <span>Profile</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Event Registration Modal -->
+    <div id="eventModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalEventName">Event Registration</h2>
+                <button class="modal-close" id="closeEventModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="eventModalBody"></div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- DuckDB-WASM Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.0/dist/duckdb-mvp.wasm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.0/dist/duckdb-browser-mvp.worker.js"></script>
+
+    <!-- Scripts -->
+    <script type="module" src="app.js"></script>
+</body>
+
+</html>
