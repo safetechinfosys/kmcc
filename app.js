@@ -84,24 +84,42 @@ class CommunityApp {
     // ===================================
 
     async checkAuth() {
-        const savedUser = this.loadFromStorage('currentUser');
-        if (savedUser) {
-            // Verify user still exists in database
-            const { data, error } = await this.dbManager.getClient()
-                .from('users')
-                .select('*')
-                .eq('id', savedUser.id)
-                .single();
+        try {
+            const savedUser = this.loadFromStorage('currentUser');
 
-            if (data && !error) {
-                this.currentUser = data;
-                this.showView('dashboard');
-                this.updateUserName();
+            if (savedUser && savedUser.id) {
+                // Validate if ID is UUID (simple check)
+                const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(savedUser.id);
+
+                if (!isUUID) {
+                    console.warn('Invalid user ID format (old data), clearing session');
+                    localStorage.removeItem('currentUser');
+                    this.showView('login');
+                    return;
+                }
+
+                // Verify user still exists in database
+                const { data, error } = await this.dbManager.getClient()
+                    .from('users')
+                    .select('*')
+                    .eq('id', savedUser.id)
+                    .single();
+
+                if (data && !error) {
+                    this.currentUser = data;
+                    this.showView('dashboard');
+                    this.updateUserName();
+                } else {
+                    console.log('User not found or error, logging out', error);
+                    localStorage.removeItem('currentUser');
+                    this.showView('login');
+                }
             } else {
-                localStorage.removeItem('currentUser');
                 this.showView('login');
             }
-        } else {
+        } catch (error) {
+            console.error('Auth check failed:', error);
+            localStorage.removeItem('currentUser');
             this.showView('login');
         }
     }
