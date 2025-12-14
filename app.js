@@ -1,13 +1,13 @@
 // ===================================
-// DuckDB-WASM Database Setup
+// Supabase Database Setup
 // ===================================
 
-import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.28.0/+esm';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { SUPABASE_CONFIG } from './supabase-config.js';
 
-class DuckDBManager {
+class SupabaseManager {
     constructor() {
-        this.db = null;
-        this.conn = null;
+        this.client = null;
         this.initialized = false;
     }
 
@@ -15,166 +15,30 @@ class DuckDBManager {
         if (this.initialized) return;
 
         try {
-            console.log('Initializing DuckDB-WASM...');
+            console.log('Initializing Supabase...');
 
-            // Select bundle based on browser capabilities
-            const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
-            const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+            // Check if config is set
+            if (SUPABASE_CONFIG.url === 'YOUR_SUPABASE_URL' || SUPABASE_CONFIG.anonKey === 'YOUR_SUPABASE_ANON_KEY') {
+                throw new Error('Please configure Supabase credentials in supabase-config.js');
+            }
 
-            // Instantiate worker
-            const worker_url = URL.createObjectURL(
-                new Blob([`importScripts("${bundle.mainWorker}");`], { type: 'text/javascript' })
-            );
-            const worker = new Worker(worker_url);
-            const logger = new duckdb.ConsoleLogger();
-
-            // Create database
-            this.db = new duckdb.AsyncDuckDB(logger, worker);
-            await this.db.instantiate(bundle.mainModule, bundle.pthreadWorker);
-            URL.revokeObjectURL(worker_url);
-
-            // Create connection
-            this.conn = await this.db.connect();
-
-            // Create tables
-            await this.createTables();
+            // Create Supabase client
+            this.client = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
 
             this.initialized = true;
-            console.log('DuckDB-WASM initialized successfully!');
+            console.log('Supabase initialized successfully!');
         } catch (error) {
-            console.error('Failed to initialize DuckDB:', error);
+            console.error('Failed to initialize Supabase:', error);
             throw error;
         }
     }
 
-    async createTables() {
-        // Users table
-        await this.conn.query(`
-            CREATE TABLE IF NOT EXISTS users (
-                id VARCHAR PRIMARY KEY,
-                full_name VARCHAR NOT NULL,
-                email VARCHAR UNIQUE NOT NULL,
-                mobile VARCHAR UNIQUE NOT NULL,
-                password VARCHAR NOT NULL,
-                country VARCHAR,
-                occupation VARCHAR,
-                spouse_name VARCHAR,
-                address VARCHAR,
-                district VARCHAR,
-                pincode VARCHAR,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-
-        // Kids table (one-to-many relationship with users)
-        await this.conn.query(`
-            CREATE TABLE IF NOT EXISTS kids (
-                id VARCHAR PRIMARY KEY,
-                user_id VARCHAR NOT NULL,
-                name VARCHAR NOT NULL,
-                age INTEGER,
-                school VARCHAR,
-                FOREIGN KEY (user_id) REFERENCES users(id)
-            )
-        `);
-
-        // Events table
-        await this.conn.query(`
-            CREATE TABLE IF NOT EXISTS events (
-                id VARCHAR PRIMARY KEY,
-                name VARCHAR NOT NULL,
-                date DATE NOT NULL,
-                venue VARCHAR NOT NULL,
-                adult_rate DECIMAL(10,2) NOT NULL,
-                kids_rate DECIMAL(10,2) NOT NULL,
-                description TEXT
-            )
-        `);
-
-        // Registrations table
-        await this.conn.query(`
-            CREATE TABLE IF NOT EXISTS registrations (
-                id VARCHAR PRIMARY KEY,
-                user_id VARCHAR NOT NULL,
-                event_id VARCHAR NOT NULL,
-                event_name VARCHAR NOT NULL,
-                event_date DATE NOT NULL,
-                event_venue VARCHAR NOT NULL,
-                adults INTEGER NOT NULL,
-                kids INTEGER NOT NULL,
-                total_amount DECIMAL(10,2) NOT NULL,
-                paid_amount DECIMAL(10,2) NOT NULL,
-                status VARCHAR DEFAULT 'booked',
-                registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id),
-                FOREIGN KEY (event_id) REFERENCES events(id)
-            )
-        `);
-
-        // Insert default events if table is empty
-        const eventsCount = await this.conn.query('SELECT COUNT(*) as count FROM events');
-        const count = eventsCount.toArray()[0].count;
-
-        if (count === 0) {
-            await this.insertDefaultEvents();
-        }
-    }
-
-    async insertDefaultEvents() {
-        const defaultEvents = [
-            {
-                id: 'evt1',
-                name: 'Annual Community Gathering 2025',
-                date: '2025-03-15',
-                venue: 'Community Hall, Ernakulam',
-                adult_rate: 500,
-                kids_rate: 250,
-                description: 'Join us for our annual community gathering with cultural programs, food, and networking.'
-            },
-            {
-                id: 'evt2',
-                name: 'Youth Sports Festival',
-                date: '2025-04-20',
-                venue: 'Sports Complex, Kottayam',
-                adult_rate: 300,
-                kids_rate: 150,
-                description: 'A day of sports activities, competitions, and fun for the whole family.'
-            },
-            {
-                id: 'evt3',
-                name: 'Cultural Night 2025',
-                date: '2025-05-10',
-                venue: 'Auditorium, Thiruvananthapuram',
-                adult_rate: 600,
-                kids_rate: 300,
-                description: 'An evening of traditional music, dance performances, and cultural celebrations.'
-            }
-        ];
-
-        for (const event of defaultEvents) {
-            await this.conn.query(`
-                INSERT INTO events (id, name, date, venue, adult_rate, kids_rate, description)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            `, [event.id, event.name, event.date, event.venue, event.adult_rate, event.kids_rate, event.description]);
-        }
-    }
-
-    async query(sql, params = []) {
+    // Helper method to execute queries
+    getClient() {
         if (!this.initialized) {
-            await this.initialize();
+            throw new Error('Supabase not initialized');
         }
-        return await this.conn.query(sql, params);
-    }
-
-    async exportDatabase() {
-        // Export database to file for backup
-        const data = await this.db.exportDatabase();
-        return data;
-    }
-
-    async importDatabase(data) {
-        // Import database from backup
-        await this.db.importDatabase(data);
+        return this.client;
     }
 }
 
@@ -185,13 +49,13 @@ class DuckDBManager {
 class CommunityApp {
     constructor() {
         this.currentUser = null;
-        this.dbManager = new DuckDBManager();
+        this.dbManager = new SupabaseManager();
         this.init();
     }
 
     async init() {
         try {
-            // Initialize DuckDB
+            // Initialize Supabase
             await this.dbManager.initialize();
 
             // Hide loading screen
@@ -204,7 +68,14 @@ class CommunityApp {
             this.setupEventListeners();
         } catch (error) {
             console.error('Failed to initialize app:', error);
-            this.showToast('Failed to initialize database. Please refresh the page.', 'error');
+            document.getElementById('loadingScreen').innerHTML = `
+                <div style="text-align: center; color: white; padding: 2rem;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #ef4444; margin-bottom: 1rem;"></i>
+                    <h2>Configuration Error</h2>
+                    <p style="margin: 1rem 0;">Please configure Supabase credentials in supabase-config.js</p>
+                    <p style="font-size: 0.9rem; color: #a0a0a0;">See setup instructions in the README</p>
+                </div>
+            `;
         }
     }
 
@@ -216,14 +87,14 @@ class CommunityApp {
         const savedUser = this.loadFromStorage('currentUser');
         if (savedUser) {
             // Verify user still exists in database
-            const result = await this.dbManager.query(
-                'SELECT * FROM users WHERE id = ?',
-                [savedUser.id]
-            );
-            const users = result.toArray();
+            const { data, error } = await this.dbManager.getClient()
+                .from('users')
+                .select('*')
+                .eq('id', savedUser.id)
+                .single();
 
-            if (users.length > 0) {
-                this.currentUser = this.mapUserFromDB(users[0]);
+            if (data && !error) {
+                this.currentUser = data;
                 this.showView('dashboard');
                 this.updateUserName();
             } else {
@@ -236,22 +107,23 @@ class CommunityApp {
     }
 
     async login(emailOrMobile, password) {
-        const result = await this.dbManager.query(`
-            SELECT * FROM users 
-            WHERE (email = ? OR mobile = ?) AND password = ?
-        `, [emailOrMobile, emailOrMobile, password]);
+        const { data, error } = await this.dbManager.getClient()
+            .from('users')
+            .select('*')
+            .or(`email.eq.${emailOrMobile},mobile.eq.${emailOrMobile}`)
+            .eq('password', password)
+            .single();
 
-        const users = result.toArray();
-
-        if (users.length > 0) {
-            this.currentUser = this.mapUserFromDB(users[0]);
+        if (data && !error) {
+            this.currentUser = data;
 
             // Load kids
-            const kidsResult = await this.dbManager.query(
-                'SELECT * FROM kids WHERE user_id = ?',
-                [this.currentUser.id]
-            );
-            this.currentUser.kids = kidsResult.toArray();
+            const { data: kids } = await this.dbManager.getClient()
+                .from('kids')
+                .select('*')
+                .eq('user_id', this.currentUser.id);
+
+            this.currentUser.kids = kids || [];
 
             this.saveToStorage('currentUser', this.currentUser);
             this.showView('dashboard');
@@ -272,43 +144,51 @@ class CommunityApp {
     async register(userData) {
         try {
             // Check if user already exists
-            const checkResult = await this.dbManager.query(`
-                SELECT id FROM users WHERE email = ? OR mobile = ?
-            `, [userData.email, userData.mobile]);
+            const { data: existing } = await this.dbManager.getClient()
+                .from('users')
+                .select('id')
+                .or(`email.eq.${userData.email},mobile.eq.${userData.mobile}`)
+                .single();
 
-            if (checkResult.toArray().length > 0) {
+            if (existing) {
                 this.showToast('User with this email or mobile already exists', 'error');
                 return false;
             }
 
             // Insert user
-            const userId = this.generateId();
-            await this.dbManager.query(`
-                INSERT INTO users (id, full_name, email, mobile, password, country, occupation, 
-                                  spouse_name, address, district, pincode)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
-                userId,
-                userData.fullName,
-                userData.email,
-                userData.mobile,
-                userData.password,
-                userData.country,
-                userData.occupation,
-                userData.spouseName || null,
-                userData.address || null,
-                userData.district || null,
-                userData.pincode || null
-            ]);
+            const { data: newUser, error: userError } = await this.dbManager.getClient()
+                .from('users')
+                .insert([{
+                    full_name: userData.fullName,
+                    email: userData.email,
+                    mobile: userData.mobile,
+                    password: userData.password,
+                    country: userData.country,
+                    occupation: userData.occupation,
+                    spouse_name: userData.spouseName || null,
+                    address: userData.address || null,
+                    district: userData.district || null,
+                    pincode: userData.pincode || null
+                }])
+                .select()
+                .single();
+
+            if (userError) throw userError;
 
             // Insert kids if any
             if (userData.kids && userData.kids.length > 0) {
-                for (const kid of userData.kids) {
-                    await this.dbManager.query(`
-                        INSERT INTO kids (id, user_id, name, age, school)
-                        VALUES (?, ?, ?, ?, ?)
-                    `, [this.generateId(), userId, kid.name, kid.age || null, kid.school || null]);
-                }
+                const kidsData = userData.kids.map(kid => ({
+                    user_id: newUser.id,
+                    name: kid.name,
+                    age: kid.age || null,
+                    school: kid.school || null
+                }));
+
+                const { error: kidsError } = await this.dbManager.getClient()
+                    .from('kids')
+                    .insert(kidsData);
+
+                if (kidsError) console.error('Error inserting kids:', kidsError);
             }
 
             this.showToast('Registration successful! Please login.', 'success');
@@ -377,7 +257,7 @@ class CommunityApp {
 
     updateUserName() {
         if (this.currentUser) {
-            document.getElementById('userName').textContent = this.currentUser.fullName.split(' ')[0];
+            document.getElementById('userName').textContent = this.currentUser.full_name.split(' ')[0];
         }
     }
 
@@ -590,8 +470,12 @@ class CommunityApp {
         container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Loading events...</p>';
 
         try {
-            const result = await this.dbManager.query('SELECT * FROM events ORDER BY date');
-            const events = result.toArray();
+            const { data: events, error } = await this.dbManager.getClient()
+                .from('events')
+                .select('*')
+                .order('date', { ascending: true });
+
+            if (error) throw error;
 
             container.innerHTML = '';
 
@@ -641,11 +525,13 @@ class CommunityApp {
     }
 
     async openEventRegistration(eventId) {
-        const result = await this.dbManager.query('SELECT * FROM events WHERE id = ?', [eventId]);
-        const events = result.toArray();
+        const { data: event, error } = await this.dbManager.getClient()
+            .from('events')
+            .select('*')
+            .eq('id', eventId)
+            .single();
 
-        if (events.length === 0) return;
-        const event = events[0];
+        if (error || !event) return;
 
         const modal = document.getElementById('eventModal');
         const modalBody = document.getElementById('eventModalBody');
@@ -718,11 +604,13 @@ class CommunityApp {
     }
 
     async updateEventTotal(eventId) {
-        const result = await this.dbManager.query('SELECT * FROM events WHERE id = ?', [eventId]);
-        const events = result.toArray();
+        const { data: event, error } = await this.dbManager.getClient()
+            .from('events')
+            .select('*')
+            .eq('id', eventId)
+            .single();
 
-        if (events.length === 0) return;
-        const event = events[0];
+        if (error || !event) return;
 
         const adults = parseInt(document.getElementById('modalAdults').value) || 0;
         const kids = parseInt(document.getElementById('modalKids').value) || 0;
@@ -740,33 +628,34 @@ class CommunityApp {
 
     async confirmEventRegistration(eventId) {
         try {
-            const result = await this.dbManager.query('SELECT * FROM events WHERE id = ?', [eventId]);
-            const events = result.toArray();
+            const { data: event, error: eventError } = await this.dbManager.getClient()
+                .from('events')
+                .select('*')
+                .eq('id', eventId)
+                .single();
 
-            if (events.length === 0) return;
-            const event = events[0];
+            if (eventError || !event) throw eventError;
 
             const adults = parseInt(document.getElementById('modalAdults').value) || 0;
             const kids = parseInt(document.getElementById('modalKids').value) || 0;
             const totalAmount = (adults * event.adult_rate) + (kids * event.kids_rate);
 
-            await this.dbManager.query(`
-                INSERT INTO registrations (id, user_id, event_id, event_name, event_date, event_venue,
-                                          adults, kids, total_amount, paid_amount, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
-                this.generateId(),
-                this.currentUser.id,
-                event.id,
-                event.name,
-                event.date,
-                event.venue,
-                adults,
-                kids,
-                totalAmount,
-                totalAmount,
-                'booked'
-            ]);
+            const { error: regError } = await this.dbManager.getClient()
+                .from('registrations')
+                .insert([{
+                    user_id: this.currentUser.id,
+                    event_id: event.id,
+                    event_name: event.name,
+                    event_date: event.date,
+                    event_venue: event.venue,
+                    adults: adults,
+                    kids: kids,
+                    total_amount: totalAmount,
+                    paid_amount: totalAmount,
+                    status: 'booked'
+                }]);
+
+            if (regError) throw regError;
 
             this.closeModal();
             this.showToast('Event registration successful!', 'success');
@@ -794,72 +683,65 @@ class CommunityApp {
         }
 
         try {
-            const searchQuery = `%${query}%`;
-            const result = await this.dbManager.query(`
-                SELECT * FROM users 
-                WHERE full_name LIKE ? 
-                   OR email LIKE ? 
-                   OR mobile LIKE ? 
-                   OR district LIKE ? 
-                   OR country LIKE ?
-            `, [searchQuery, searchQuery, searchQuery, searchQuery, searchQuery]);
+            const { data: users, error } = await this.dbManager.getClient()
+                .from('users')
+                .select('*')
+                .or(`full_name.ilike.%${query}%,email.ilike.%${query}%,mobile.ilike.%${query}%,district.ilike.%${query}%`)
+                .limit(20);
 
-            const users = result.toArray();
+            if (error) throw error;
+
+            results.innerHTML = '';
 
             if (users.length === 0) {
                 results.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">No members found.</p>';
                 return;
             }
 
-            results.innerHTML = '';
             users.forEach(user => {
                 const memberCard = document.createElement('div');
                 memberCard.className = 'member-card';
-
-                const initials = user.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-
                 memberCard.innerHTML = `
-                    <div class="member-header">
-                        <div class="member-avatar">${initials}</div>
-                        <div class="member-info">
-                            <h3>${user.full_name}</h3>
-                            <p>${user.occupation || 'Member'}</p>
-                        </div>
+                    <div class="member-avatar">
+                        <i class="fas fa-user"></i>
                     </div>
-                    <div class="member-details">
-                        <div class="member-detail">
-                            <i class="fas fa-envelope"></i>
-                            <span>${user.email}</span>
+                    <div class="member-info">
+                        <h3>${user.full_name}</h3>
+                        <div class="member-details">
+                            <div class="member-detail">
+                                <i class="fas fa-envelope"></i>
+                                <span>${user.email}</span>
+                            </div>
+                            <div class="member-detail">
+                                <i class="fas fa-phone"></i>
+                                <span>${user.mobile}</span>
+                            </div>
+                            ${user.district ? `
+                                <div class="member-detail">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span>${user.district}</span>
+                                </div>
+                            ` : ''}
+                            ${user.occupation ? `
+                                <div class="member-detail">
+                                    <i class="fas fa-briefcase"></i>
+                                    <span>${user.occupation}</span>
+                                </div>
+                            ` : ''}
                         </div>
-                        <div class="member-detail">
-                            <i class="fas fa-phone"></i>
-                            <span>${user.mobile}</span>
-                        </div>
-                        <div class="member-detail">
-                            <i class="fas fa-globe"></i>
-                            <span>${user.country}</span>
-                        </div>
-                        ${user.district ? `
-                        <div class="member-detail">
-                            <i class="fas fa-map-marker-alt"></i>
-                            <span>${user.district}</span>
-                        </div>
-                        ` : ''}
                     </div>
                 `;
-
                 results.appendChild(memberCard);
             });
         } catch (error) {
             console.error('Search error:', error);
-            results.innerHTML = '<p style="color: var(--error); text-align: center; padding: 2rem;">Search failed.</p>';
+            results.innerHTML = '<p style="color: var(--error); text-align: center; padding: 2rem;">Search failed. Please try again.</p>';
         }
     }
 
-    renderSearchResults() {
+    async renderSearchResults() {
         const results = document.getElementById('searchResults');
-        results.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Enter a search term to find members...</p>';
-        document.getElementById('searchInput').value = '';
+        results.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Enter at least 2 characters to search...</p>';
     }
 
     // ===================================
@@ -867,69 +749,53 @@ class CommunityApp {
     // ===================================
 
     async renderMyRegistrations() {
-        const container = document.getElementById('myRegistrationsList');
-
-        if (!this.currentUser) {
-            container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Please login to view registrations.</p>';
-            return;
-        }
+        const container = document.getElementById('registrationsList');
+        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Loading registrations...</p>';
 
         try {
-            const result = await this.dbManager.query(`
-                SELECT * FROM registrations 
-                WHERE user_id = ? 
-                ORDER BY registered_at DESC
-            `, [this.currentUser.id]);
+            const { data: registrations, error } = await this.dbManager.getClient()
+                .from('registrations')
+                .select('*')
+                .eq('user_id', this.currentUser.id)
+                .order('registered_at', { ascending: false });
 
-            const registrations = result.toArray();
+            if (error) throw error;
+
+            container.innerHTML = '';
 
             if (registrations.length === 0) {
-                container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">You have no event registrations yet.</p>';
+                container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">No registrations yet.</p>';
                 return;
             }
 
-            container.innerHTML = '';
             registrations.forEach(reg => {
-                const card = document.createElement('div');
-                card.className = 'registration-card';
-                card.innerHTML = `
+                const regCard = document.createElement('div');
+                regCard.className = 'registration-card';
+                regCard.innerHTML = `
                     <div class="registration-header">
-                        <div>
-                            <h3 class="registration-title">${reg.event_name}</h3>
-                            <p style="color: var(--text-secondary); font-size: 0.9rem;">
-                                <i class="fas fa-calendar"></i> ${this.formatDate(reg.event_date)}
-                            </p>
-                        </div>
-                        <span class="status-badge ${reg.status}">${reg.status}</span>
+                        <h3>${reg.event_name}</h3>
+                        <span class="status-badge status-${reg.status}">${reg.status}</span>
                     </div>
                     <div class="registration-details">
-                        <div class="detail-item">
-                            <span class="detail-label">Venue</span>
-                            <span class="detail-value">${reg.event_venue}</span>
+                        <div class="registration-detail">
+                            <i class="fas fa-calendar"></i>
+                            <span>${this.formatDate(reg.event_date)}</span>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Adults</span>
-                            <span class="detail-value">${reg.adults}</span>
+                        <div class="registration-detail">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>${reg.event_venue}</span>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Kids</span>
-                            <span class="detail-value">${reg.kids}</span>
+                        <div class="registration-detail">
+                            <i class="fas fa-users"></i>
+                            <span>${reg.adults} Adults, ${reg.kids} Kids</span>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Total Amount</span>
-                            <span class="detail-value">₹${reg.total_amount}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Paid Amount</span>
-                            <span class="detail-value">₹${reg.paid_amount}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Registered On</span>
-                            <span class="detail-value">${this.formatDate(reg.registered_at)}</span>
+                        <div class="registration-detail">
+                            <i class="fas fa-rupee-sign"></i>
+                            <span>Total: ₹${reg.total_amount} | Paid: ₹${reg.paid_amount}</span>
                         </div>
                     </div>
                 `;
-                container.appendChild(card);
+                container.appendChild(regCard);
             });
         } catch (error) {
             console.error('Error loading registrations:', error);
@@ -942,117 +808,118 @@ class CommunityApp {
     // ===================================
 
     async renderProfile() {
+        if (!this.currentUser) return;
+
         const container = document.getElementById('profileContent');
 
-        if (!this.currentUser) {
-            container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Please login to view profile.</p>';
-            return;
-        }
+        // Load fresh kids data
+        const { data: kids } = await this.dbManager.getClient()
+            .from('kids')
+            .select('*')
+            .eq('user_id', this.currentUser.id);
 
-        try {
-            // Reload user data from database
-            const userResult = await this.dbManager.query('SELECT * FROM users WHERE id = ?', [this.currentUser.id]);
-            const users = userResult.toArray();
+        const kidsHtml = kids && kids.length > 0 ? kids.map(kid => `
+            <div class="kid-info">
+                <h4><i class="fas fa-child"></i> ${kid.name}</h4>
+                <p>Age: ${kid.age || 'N/A'} | School: ${kid.school || 'N/A'}</p>
+            </div>
+        `).join('') : '<p style="color: var(--text-secondary);">No children added</p>';
 
-            if (users.length === 0) {
-                container.innerHTML = '<p style="color: var(--error); text-align: center; padding: 2rem;">User not found.</p>';
-                return;
-            }
-
-            const user = this.mapUserFromDB(users[0]);
-
-            // Load kids
-            const kidsResult = await this.dbManager.query('SELECT * FROM kids WHERE user_id = ?', [user.id]);
-            const kids = kidsResult.toArray();
-
-            container.innerHTML = `
-                <div class="profile-section">
-                    <h2><i class="fas fa-user"></i> Personal Information</h2>
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <span class="info-label">Full Name</span>
-                            <span class="info-value">${user.fullName}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Email</span>
-                            <span class="info-value">${user.email}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Mobile</span>
-                            <span class="info-value">${user.mobile}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Country</span>
-                            <span class="info-value">${user.country}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Occupation</span>
-                            <span class="info-value">${user.occupation}</span>
-                        </div>
+        container.innerHTML = `
+            <div class="profile-section">
+                <h3><i class="fas fa-user"></i> Personal Information</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Full Name</span>
+                        <span class="info-value">${this.currentUser.full_name}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Email</span>
+                        <span class="info-value">${this.currentUser.email}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Mobile</span>
+                        <span class="info-value">${this.currentUser.mobile}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Country</span>
+                        <span class="info-value">${this.currentUser.country || 'N/A'}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Occupation</span>
+                        <span class="info-value">${this.currentUser.occupation || 'N/A'}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Spouse</span>
+                        <span class="info-value">${this.currentUser.spouse_name || 'N/A'}</span>
                     </div>
                 </div>
+            </div>
 
-                ${user.spouseName ? `
+            ${this.currentUser.address ? `
                 <div class="profile-section">
-                    <h2><i class="fas fa-heart"></i> Family Information</h2>
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <span class="info-label">Spouse Name</span>
-                            <span class="info-value">${user.spouseName}</span>
-                        </div>
-                    </div>
-                    ${kids.length > 0 ? `
-                        <h3 style="margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1rem; color: var(--text-secondary);">Children</h3>
-                        ${kids.map((kid, index) => `
-                            <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 0.5rem;">
-                                <strong>${kid.name}</strong> - Age: ${kid.age || 'N/A'}${kid.school ? `, ${kid.school}` : ''}
-                            </div>
-                        `).join('')}
-                    ` : ''}
+                    <h3><i class="fas fa-map-marker-alt"></i> Address</h3>
+                    <p>${this.currentUser.address}</p>
+                    <p>${this.currentUser.district || ''} ${this.currentUser.pincode || ''}</p>
                 </div>
-                ` : ''}
+            ` : ''}
 
-                ${user.address || user.district ? `
-                <div class="profile-section">
-                    <h2><i class="fas fa-map-marker-alt"></i> Address in India</h2>
-                    <div class="info-grid">
-                        ${user.address ? `
-                        <div class="info-item" style="grid-column: 1 / -1;">
-                            <span class="info-label">Street Address</span>
-                            <span class="info-value">${user.address}</span>
-                        </div>
-                        ` : ''}
-                        ${user.district ? `
-                        <div class="info-item">
-                            <span class="info-label">District</span>
-                            <span class="info-value">${user.district}</span>
-                        </div>
-                        ` : ''}
-                        ${user.pincode ? `
-                        <div class="info-item">
-                            <span class="info-label">Pincode</span>
-                            <span class="info-value">${user.pincode}</span>
-                        </div>
-                        ` : ''}
-                    </div>
-                </div>
-                ` : ''}
-
-                <div class="form-actions">
-                    <button class="btn btn-secondary btn-block" onclick="app.logout()">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </button>
-                </div>
-            `;
-        } catch (error) {
-            console.error('Error loading profile:', error);
-            container.innerHTML = '<p style="color: var(--error); text-align: center; padding: 2rem;">Failed to load profile.</p>';
-        }
+            <div class="profile-section">
+                <h3><i class="fas fa-users"></i> Family</h3>
+                ${kidsHtml}
+            </div>
+        `;
     }
 
     // ===================================
-    // Utilities
+    // Utility Methods
     // ===================================
+
+    formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-IN', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    }
+
+    generateId() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    saveToStorage(key, value) {
+        localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    loadFromStorage(key) {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : null;
+    }
+
+    showToast(message, type = 'info') {
+        // Remove existing toasts
+        document.querySelectorAll('.toast').forEach(t => t.remove());
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+            <span>${message}</span>
+        `;
+
+        document.body.appendChild(toast);
+
+        setTimeout(() => toast.classList.add('show'), 100);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
 
     mapUserFromDB(dbUser) {
         return {
@@ -1065,75 +932,10 @@ class CommunityApp {
             spouseName: dbUser.spouse_name,
             address: dbUser.address,
             district: dbUser.district,
-            pincode: dbUser.pincode,
-            createdAt: dbUser.created_at
+            pincode: dbUser.pincode
         };
-    }
-
-    loadFromStorage(key) {
-        try {
-            const data = localStorage.getItem(key);
-            return data ? JSON.parse(data) : null;
-        } catch (error) {
-            console.error('Error loading from storage:', error);
-            return null;
-        }
-    }
-
-    saveToStorage(key, data) {
-        try {
-            localStorage.setItem(key, JSON.stringify(data));
-        } catch (error) {
-            console.error('Error saving to storage:', error);
-        }
-    }
-
-    generateId() {
-        return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    }
-
-    formatDate(dateString) {
-        const date = new Date(dateString);
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        return date.toLocaleDateString('en-IN', options);
-    }
-
-    showToast(message, type = 'info') {
-        const container = document.getElementById('toastContainer');
-
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-
-        const icons = {
-            success: 'fa-check-circle',
-            error: 'fa-exclamation-circle',
-            warning: 'fa-exclamation-triangle',
-            info: 'fa-info-circle'
-        };
-
-        toast.innerHTML = `
-            <div class="toast-icon">
-                <i class="fas ${icons[type]}"></i>
-            </div>
-            <div class="toast-content">
-                <div class="toast-message">${message}</div>
-            </div>
-        `;
-
-        container.appendChild(toast);
-
-        setTimeout(() => {
-            toast.style.animation = 'slideInRight 0.3s reverse';
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
     }
 }
 
-// ===================================
-// Initialize Application
-// ===================================
-
-let app;
-document.addEventListener('DOMContentLoaded', () => {
-    app = new CommunityApp();
-});
+// Initialize app
+const app = new CommunityApp();
